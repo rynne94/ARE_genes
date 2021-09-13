@@ -1,0 +1,111 @@
+ set the working directoyy
+setwd()
+getwd()
+# installs required
+install.packages('tidyverse')
+library(tidyverse)
+if (!require("gplots")) {
+  install.packages("gplots", dependencies = TRUE)
+  library(gplots)
+}
+if (!require("RColorBrewer")) {
+  install.packages("RColorBrewer", dependencies = TRUE)
+  library(RColorBrewer)
+}
+library(gplots)
+library(RColorBrewer)
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("pcaMethods")
+library(pcaMethods)
+
+library('VennDiagram')
+
+library(tximport)
+library(tidyverse)
+library(GenomicFeatures)
+library(DelayedArray) 
+library(DESeq2)
+library(magrittr)
+
+#load annotation file
+library(readr)
+
+ARE_3UTR <- read_csv('ARE_3UTR.csv')
+annotation <- read_csv("annotation.csv")
+
+all_genes_total_KD <- read_csv('csv/all_genes_total_KD.csv')
+all_genes_poly_KD <- read_csv('csv/all_genes_poly_KD.csv')
+all_genes_80S_KD <- read_csv('csv/all_genes_80S_KD.csv')
+knockdown_total <- read_csv('results_noDEX_KDcomparison_total.csv')
+knockdown_poly <- read_csv('results_noDEX_KDcomparison_poly.csv')
+knockdown_80S <- read_csv('results_noDEX_KDcomparison_outlier_80S.csv')
+
+dim(inner_join(knockdown_total, ARE_3UTR, by = "gene_ID")) # 3838 common
+dim(inner_join(knockdown_poly, ARE_3UTR, by = "gene_ID")) # 3704 common
+
+knockdown_total_p <- knockdown_total %>% 
+  dplyr::filter(padj <0.1) %>% 
+  dplyr::filter(log2FoldChange >0) %>% 
+  dplyr::select(gene_ID)
+
+knockdown_80S_p <- knockdown_80S %>% 
+  dplyr::filter(padj<0.1) %>% 
+  dplyr::filter(log2FoldChange >0) %>% 
+  dplyr::select(gene_ID)
+
+knockdown_poly_p <- knockdown_poly %>% 
+  dplyr::filter(padj<0.1) %>% 
+  dplyr::filter(log2FoldChange >0) %>% 
+  dplyr::select(gene_ID)
+
+ARE_gene_ID <- ARE_3UTR %>% 
+  dplyr::select(gene_ID)
+  
+total_ARE <- dim(inner_join(knockdown_total_p, ARE_3UTR, by = "gene_ID"))
+poly_ARE <- dim(inner_join(knockdown_poly_p, ARE_3UTR, by = "gene_ID"))
+mono_ARE <- dim(inner_join(knockdown_80S_p, ARE_3UTR, by = 'gene_ID'))
+
+input <- list(ARE_gene_ID, knockdown_total_p)
+tmp <- venn(input)
+venn(input)
+
+input <- list(ARE_gene_ID, knockdown_80S_p)
+tmp <- venn(input)
+venn(input)
+
+input <- list(ARE_gene_ID, knockdown_poly_p)
+tmp <- venn(input)
+venn(input)
+
+knockdown_total <- knockdown_total %>% 
+  dplyr::filter(log2FoldChange >0) %>% 
+  dplyr::select(gene_ID, log2FoldChange)
+
+knockdown_80S <- knockdown_80S %>% 
+  dplyr::filter(log2FoldChange >0) %>% 
+  dplyr::select(gene_ID, log2FoldChange)
+
+knockdown_poly <- knockdown_poly %>% 
+  dplyr::filter(log2FoldChange >0) %>% 
+  dplyr::select(gene_ID, log2FoldChange)
+ 
+input1 <- list(ARE_gene_ID, knockdown_poly, knockdown_total) 
+tmp1 <- venn(input1)          
+venn(input1)               
+
+total_ARE <- semi_join(ARE_gene_ID, knockdown_total) 
+write_csv(total_ARE, file = 'csv/total_ARE.csv')
+mono_ARE <- semi_join(ARE_gene_ID, knockdown_80S) 
+write_csv(total_ARE, file = 'csv/80S_ARE.csv')
+poly_ARE  <- semi_join(ARE_gene_ID, knockdown_poly) 
+write_csv(poly_ARE, file = 'csv/poly_ARE.csv')
+total_p_ARE <- semi_join(ARE_gene_ID, knockdown_total_p)
+write_csv(total_p_ARE, file = 'csv/total_p_ARE.csv')
+mono_p_ARE <- semi_join(ARE_gene_ID, mono_total_p)
+write_csv(total_p_ARE, file = 'csv/80S_p_ARE.csv')
+poly_p_ARE <- semi_join(ARE_gene_ID, knockdown_poly_p)
+write_csv(poly_p_ARE, file = 'csv/poly_p_ARE.csv')
+
